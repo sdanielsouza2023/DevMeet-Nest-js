@@ -17,9 +17,23 @@ export class UserService{
 
   async existsByEmail(email: String) : Promise<boolean>{
     const result = await this.userModel.findOne({email})
+    
     if(result){
         return true
     }
     return false
   }
+  async getUserByLoginPassword(email: string, password: string): Promise<UserDocument | null>{
+    const user =  await this.userModel.findOne({email}) as UserDocument
+
+    if(user){
+      const bytes = CryptoJs.AES.decrypt(user.password, process.env.USER_CYPHER_SECRET_KEY)
+      const savedPassword = bytes.toString(CryptoJs.enc.Utf8)
+      if(password == savedPassword){
+        return user
+      }
+    }
+    return null
+  }
+
 }
