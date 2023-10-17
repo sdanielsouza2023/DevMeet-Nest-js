@@ -1,6 +1,9 @@
-import {Controller, Get, Request, BadRequestException} from '@nestjs/common'
+import {Controller, Get, Put,Request, BadRequestException, Body, HttpCode, HttpStatus} from '@nestjs/common'
 import { UserService } from './user.service';
 import { UserMessagesHelper } from './helpers/messages.helper';
+//import { dot } from 'node:test/reporters';
+import { UpdateUserDto } from './dtos/updateuser.dto';
+import { request } from 'http';
 
 @Controller('user')
 export class UserController{
@@ -22,4 +25,11 @@ export class UserController{
             id:user._id
         }
     } 
+
+    @Put()
+    @HttpCode(HttpStatus.OK)
+    async updateUser(@Request() req, @Body() dto: UpdateUserDto){
+        const {userId} = req?.user
+        await this.userService.updateUser(userId, dto)
+    } // por eremos resceber do req e do body
 }
