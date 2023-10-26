@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Meet, MeetDocument } from './schemas/meet.schema';
@@ -6,12 +6,17 @@ import { UserService } from 'src/user/user.service';
 import { GetMeetDto } from './dtos/getmeet.dto';
 import { CreateMeetDto } from './dtos/createMeet.dto';
 import { generateLink } from './helpers/linkgenerator.helper';
-
+import { MeetObject , MeetObjectDocument } from './schemas/meetobjectschema';
+import { UpdateMeetDto } from './dtos/updatemeet.dto';
+import { MeetMessagesHelper } from './helpers/meetmessages.helper';
+console.log(MeetObject, "oooooooooooooooooooooooooooooooooooooooo")
 @Injectable()
 export class MeetService {
     private readonly logger = new Logger(MeetService.name)
     constructor(
-        @InjectModel(Meet.name) private readonly model: Model<MeetDocument>,
+         @InjectModel(Meet.name) private readonly model: Model<MeetDocument>,
+         @InjectModel(MeetObject.name) private readonly objectModel: Model<MeetObjectDocument>,
+     
          private readonly userService: UserService
     ){}
 
@@ -38,6 +43,42 @@ export class MeetService {
         this.logger.debug(`getMeetsByUser - ${userId} - ${meetId}` + userId)
         return await this.model.deleteOne({user: userId, _id: meetId}) 
     }
+
+    async getMeetObjects(meetId: string, userId:string){
+        this.logger.debug(`getMeetObjects - ${userId}  - ${meetId}`)
+        const user = await this.userService.getUserById(userId)
+        const meet = await this.model.findOne({user,_id: meetId})
+
+        return await this.objectModel.find({meet})
+
+    }
+
+    async update(meedId:string,  userId:string, dto: UpdateMeetDto){
+        this.logger.debug(`update - ${userId}  - ${meedId}`)
+        const user = await this.userService.getUserById(userId)
+        const meet = await this.model.findOne({user, _id: meedId})
+        if(!meet){
+            throw new BadRequestException(MeetMessagesHelper.UPDATE_MEET_NOT_FOUND)
+        }
+
+        meet.name = dto.name
+        meet.color = dto.color
+        await this.model.findByIdAndUpdate({_id: meedId} , meet)
+        await this.objectModel.deleteMany({meet})
+
+        let objectPayload
+
+        for(const object of dto.objects){
+            objectPayload = {
+                meet,
+                ... object
+            }
+
+            await this.objectModel.create(objectPayload)
+        }
+
+    }
+
 
 
 }
